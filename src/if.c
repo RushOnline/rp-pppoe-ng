@@ -458,9 +458,28 @@ openInterface(char const *ifname, UINT16_t type, unsigned char *hwaddr, UINT16_t
     if (hwaddr) {
 	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
 	if (ioctl(fd, SIOCGIFHWADDR, &ifr) < 0) {
-	    fatalSys("ioctl(SIOCGIFHWADDR)");
+	  fatalSys("ioctl(SIOCGIFHWADDR)");
 	}
-	memcpy(hwaddr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
+	/* fake MAC address if hwaddr != 0:00:00:00:00:00 */
+	if ((hwaddr[0]==0) && (hwaddr[1]==0) && (hwaddr[2]==0) &&
+	    (hwaddr[3]==0) && (hwaddr[4]==0) && (hwaddr[5]==0)) {
+	  /* this is the normal mode, do not fake anything */
+	  memcpy(hwaddr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
+	} else {
+	  /* this is the mode using a faked Hardware address */
+	  /* switch Interface to promisc Mode */
+	  if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
+	    	  fatalSys("ioctl(SIOCGIFFLAGS)");
+	  }
+	  ifr.ifr_flags |= IFF_PROMISC;
+	  if (ioctl(fd, SIOCSIFFLAGS, &ifr) < 0) {
+	      fatalSys("ioctl(SIOCSIFFLAGS)");
+	  }
+	  /* satisfy the subsequent checks */
+	  if (ioctl(fd, SIOCGIFHWADDR, &ifr) < 0) {
+	    fatalSys("ioctl(SIOCGIFHWADDR)");
+	  }
+	}
 #ifdef ARPHRD_ETHER
 	if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER) {
 	    char buffer[256];
