@@ -80,7 +80,7 @@ pppoe-relay: relay.o if.o debug.o common.o
 	@CC@ -o $@ $^ $(LDFLAGS)
 
 pppoe.o: pppoe.c pppoe.h
-	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+	@CC@ $(CFLAGS) -DAUTO_IFUP '-DVERSION="$(VERSION)"' -c -o $@ $<
 
 discovery.o: discovery.c pppoe.h
 	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
