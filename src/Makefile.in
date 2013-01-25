@@ -92,7 +92,7 @@ md5.o: md5.c md5.h
 	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
 
 pppoe-server.o: pppoe-server.c pppoe.h @PPPOE_SERVER_DEPS@
-	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+	@CC@ $(CFLAGS) -DHAVE_LINUX_KERNEL_PPPOE=1 '-DVERSION="$(VERSION)"' -c -o $@ $<
 
 pppoe-sniff.o: pppoe-sniff.c pppoe.h
 	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
