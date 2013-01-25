@@ -420,6 +420,7 @@ usage(char const *argv0)
 	    "   -k             -- Kill a session with PADT (requires -e)\n"
 	    "   -d             -- Perform discovery, print session info and exit.\n"
 	    "   -f disc:sess   -- Set Ethernet frame types (hex).\n"
+	    "   -H XX:XX:XX:XX:XX:XX -- Force Hardware Address (hex).\n"
 	    "   -h             -- Print usage information.\n\n"
 	    "PPPoE Version %s, Copyright (C) 2001-2006 Roaring Penguin Software Inc.\n"
 	    "PPPoE comes with ABSOLUTELY NO WARRANTY.\n"
@@ -474,9 +475,9 @@ main(int argc, char *argv[])
     openlog("pppoe", LOG_PID, LOG_DAEMON);
 
 #ifdef DEBUGGING_ENABLED
-    options = "I:VAT:D:hS:C:Usm:np:e:kdf:F:t:";
+    options = "I:VAT:D:hS:C:Usm:np:e:kdf:F:t:H:";
 #else
-    options = "I:VAT:hS:C:Usm:np:e:kdf:F:t:";
+    options = "I:VAT:hS:C:Usm:np:e:kdf:F:t:H:";
 #endif
     while((opt = getopt(argc, argv, options)) != -1) {
 	switch(opt) {
@@ -509,6 +510,18 @@ main(int argc, char *argv[])
 	    Eth_PPPOE_Discovery = (UINT16_t) discoveryType;
 	    Eth_PPPOE_Session   = (UINT16_t) sessionType;
 	    break;
+        case 'H':
+	  if (sscanf(optarg, "%2x:%2x:%2x:%2x:%2x:%2x",
+		     &m[0], &m[1], &m[2], &m[3], &m[4], &m[5])!= 6) {
+	    fprintf(stderr,
+		    "Illegal argument to -H: Should be"
+		    "XX:XX:XX:XX:XX:XX in hex\n");
+	    exit(EXIT_FAILURE);
+	  }
+	  for (n=0; n<6; n++) {
+	    conn.myEth[n] = (unsigned char) m[n];
+	  }
+	  break;
 	case 'd':
 	    optSkipSession = 1;
 	    break;

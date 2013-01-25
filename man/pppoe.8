@@ -97,6 +97,19 @@ you are strongly recommended to use a \fB\-m 1412\fR option.  This avoids
 having to set the MTU on all the hosts on the LAN.
 
 .TP
+.B \-H \fIMAC\fR
+Causes
+.B pppoe
+to use the indicated Ethernet MAC address as the source address for
+sending packets.
+.I MAC
+must be specified in the 
+.IR AA : BB : CC : DD : EE : FF
+syntax.  If this option is specified,
+.B pppoe
+puts the interface into promiscuous mode.
+
+.TP
 .B \-p \fIfile\fR
 Causes \fBpppoe\fR to write its process-ID to the specified file.  This
 can be used to locate and kill \fBpppoe\fR processes.
