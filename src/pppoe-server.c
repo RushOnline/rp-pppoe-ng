@@ -151,6 +151,9 @@ static int Synchronous = 0;
 /* Ignore PADI if no free sessions */
 static int IgnorePADIIfNoFreeSessions = 0;
 
+/* Don't kill sessions on server exit */
+static int LeaveSessionsOnExit = 0;
+
 static int KidPipe[2] = {-1, -1};
 static int LockFD = -1;
 
@@ -308,6 +311,8 @@ incrementIPAddress(unsigned char ip[IPV4ALEN])
 void
 killAllSessions(void)
 {
+    if (LeaveSessionsOnExit) return;
+
     ClientSession *sess = BusySessions;
     while(sess) {
 	sess->funcs->stop(sess, "Shutting Down");
@@ -1158,6 +1163,7 @@ usage(char const *argv0)
     fprintf(stderr, "   -1             -- Allow only one session per user.\n");
 #endif
 
+    fprintf(stderr, "   -E             -- Don't kill child sessions on exit.\n");
     fprintf(stderr, "   -i             -- Ignore PADI if no free sessions.\n");
     fprintf(stderr, "   -h             -- Print usage information.\n\n");
     fprintf(stderr, "PPPoE-Server Version %s, Copyright (C) 2001-2009 Roaring Penguin Software Inc.\n", VERSION);
@@ -1200,9 +1206,9 @@ main(int argc, char **argv)
 #endif
 
 #ifndef HAVE_LINUX_KERNEL_PPPOE
-    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:sp:lrudPc:S:1q:Q:";
+    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:sp:lrudPc:S:1q:Q:E";
 #else
-    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:skp:lrudPc:S:1q:Q:";
+    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:skp:lrudPc:S:1q:Q:E";
 #endif
 
     if (getuid() != geteuid() ||
@@ -1420,6 +1426,9 @@ main(int argc, char **argv)
 	    exit(1);
 #endif
 	    break;
+        case 'E':
+            LeaveSessionsOnExit = 1;
+            break;
 	}
     }
 
