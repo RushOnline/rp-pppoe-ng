@@ -755,7 +755,7 @@ processPADI(Interface *ethif, PPPoEPacket *packet, int len)
             }
         }
 
-        int slen = strlen(servname.length);
+        int slen = ntohs(servname.length);
         CHECK_ROOM(cursor, pado.payload, TAG_HDR_SIZE+slen);
         memcpy(cursor, &servname, TAG_HDR_SIZE);
         memcpy(cursor+TAG_HDR_SIZE, servname.payload, slen);
@@ -1196,8 +1196,9 @@ usage(char const *argv0)
     fprintf(stderr, "   -1             -- Allow only one session per user.\n");
 #endif
 
-    fprintf(stderr, "   -E             -- Don't kill child sessions on exit.\n");
     fprintf(stderr, "   -D             -- Enable D-Link routers compatibilty.\n");
+    fprintf(stderr, "   -E             -- Don't kill child sessions on exit.\n");
+    fprintf(stderr, "   -F             -- Run foreground.\n");
     fprintf(stderr, "   -i             -- Ignore PADI if no free sessions.\n");
     fprintf(stderr, "   -h             -- Print usage information.\n\n");
     fprintf(stderr, "PPPoE-Server Version %s, Copyright (C) 2001-2009 Roaring Penguin Software Inc.\n", VERSION);
@@ -1240,9 +1241,9 @@ main(int argc, char **argv)
 #endif
 
 #ifndef HAVE_LINUX_KERNEL_PPPOE
-    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:sp:lrudPc:S:1q:Q:ED";
+    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:sp:lrudPc:S:1q:Q:EDF";
 #else
-    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:skp:lrudPc:S:1q:Q:ED";
+    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:skp:lrudPc:S:1q:Q:EDF";
 #endif
 
     if (getuid() != geteuid() ||
