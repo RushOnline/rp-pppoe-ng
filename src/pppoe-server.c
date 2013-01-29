@@ -154,6 +154,9 @@ static int IgnorePADIIfNoFreeSessions = 0;
 /* Don't kill sessions on server exit */
 static int LeaveSessionsOnExit = 0;
 
+/* Enable D-Link quirks support */
+static int EnableDlinkCompatibility = 0;
+
 static int KidPipe[2] = {-1, -1};
 static int LockFD = -1;
 
@@ -730,25 +733,55 @@ processPADI(Interface *ethif, PPPoEPacket *packet, int len)
 	    plen += sizeof(mru) + TAG_HDR_SIZE;
 	}
     }
-    /* If no service-names specified on command-line, just send default
-       zero-length name.  Otherwise, add all service-name tags */
+
     servname.type = htons(TAG_SERVICE_NAME);
-    if (!NumServiceNames) {
-	servname.length = 0;
-	CHECK_ROOM(cursor, pado.payload, TAG_HDR_SIZE);
-	memcpy(cursor, &servname, TAG_HDR_SIZE);
-	cursor += TAG_HDR_SIZE;
-	plen += TAG_HDR_SIZE;
+    if (EnableDlinkCompatibility) {
+        /*
+         * Some of D-Links may or may not supply service name tag.
+         * Some of D-Links want only one service name tag in reply.
+         */
+        if (requestedService.length) {
+            /* We has requested service name, so we just copying request */
+            servname.length = requestedService.length;
+            memcpy(servname.payload, requestedService.payload, ntohs(requestedService.length));
+        } else {
+            /* reply with default (first) service name if we has one */
+            if (NumServiceNames) {
+                int slen = strlen(ServiceNames[0]);
+                servname.length = htons(slen);
+                memcpy(servname.payload, ServiceNames[0], slen);
+            } else {
+                servname.length = 0;
+            }
+        }
+
+        int slen = strlen(servname.length);
+        CHECK_ROOM(cursor, pado.payload, TAG_HDR_SIZE+slen);
+        memcpy(cursor, &servname, TAG_HDR_SIZE);
+        memcpy(cursor+TAG_HDR_SIZE, servname.payload, slen);
+        cursor += TAG_HDR_SIZE+slen;
+        plen += TAG_HDR_SIZE+slen;
+
     } else {
-	for (i=0; i<NumServiceNames; i++) {
-	    int slen = strlen(ServiceNames[i]);
-	    servname.length = htons(slen);
-	    CHECK_ROOM(cursor, pado.payload, TAG_HDR_SIZE+slen);
-	    memcpy(cursor, &servname, TAG_HDR_SIZE);
-	    memcpy(cursor+TAG_HDR_SIZE, ServiceNames[i], slen);
-	    cursor += TAG_HDR_SIZE+slen;
-	    plen += TAG_HDR_SIZE+slen;
-	}
+        /* If no service-names specified on command-line, just send default
+           zero-length name.  Otherwise, add all service-name tags */
+        if (!NumServiceNames) {
+            servname.length = 0;
+            CHECK_ROOM(cursor, pado.payload, TAG_HDR_SIZE);
+            memcpy(cursor, &servname, TAG_HDR_SIZE);
+            cursor += TAG_HDR_SIZE;
+            plen += TAG_HDR_SIZE;
+        } else {
+            for (i=0; i<NumServiceNames; i++) {
+                int slen = strlen(ServiceNames[i]);
+                servname.length = htons(slen);
+                CHECK_ROOM(cursor, pado.payload, TAG_HDR_SIZE+slen);
+                memcpy(cursor, &servname, TAG_HDR_SIZE);
+                memcpy(cursor+TAG_HDR_SIZE, ServiceNames[i], slen);
+                cursor += TAG_HDR_SIZE+slen;
+                plen += TAG_HDR_SIZE+slen;
+            }
+        }
     }
 
     CHECK_ROOM(cursor, pado.payload, TAG_HDR_SIZE + COOKIE_LEN);
@@ -1164,6 +1197,7 @@ usage(char const *argv0)
 #endif
 
     fprintf(stderr, "   -E             -- Don't kill child sessions on exit.\n");
+    fprintf(stderr, "   -D             -- Enable D-Link routers compatibilty.\n");
     fprintf(stderr, "   -i             -- Ignore PADI if no free sessions.\n");
     fprintf(stderr, "   -h             -- Print usage information.\n\n");
     fprintf(stderr, "PPPoE-Server Version %s, Copyright (C) 2001-2009 Roaring Penguin Software Inc.\n", VERSION);
@@ -1206,9 +1240,9 @@ main(int argc, char **argv)
 #endif
 
 #ifndef HAVE_LINUX_KERNEL_PPPOE
-    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:sp:lrudPc:S:1q:Q:E";
+    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:sp:lrudPc:S:1q:Q:ED";
 #else
-    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:skp:lrudPc:S:1q:Q:E";
+    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:skp:lrudPc:S:1q:Q:ED";
 #endif
 
     if (getuid() != geteuid() ||
@@ -1428,6 +1462,9 @@ main(int argc, char **argv)
 	    break;
         case 'E':
             LeaveSessionsOnExit = 1;
+            break;
+        case 'D':
+            EnableDlinkCompatibility = 1;
             break;
 	}
     }
