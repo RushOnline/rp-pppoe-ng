@@ -157,6 +157,9 @@ static int LeaveSessionsOnExit = 0;
 /* Enable D-Link quirks support */
 static int EnableDlinkCompatibility = 0;
 
+/* To pass or not to pass extented attributes for radius */
+static int EnableRadiusPlugin = 0;
+
 static int KidPipe[2] = {-1, -1};
 static int LockFD = -1;
 
@@ -1199,6 +1202,7 @@ usage(char const *argv0)
     fprintf(stderr, "   -D             -- Enable D-Link routers compatibilty.\n");
     fprintf(stderr, "   -E             -- Don't kill child sessions on exit.\n");
     fprintf(stderr, "   -F             -- Run foreground.\n");
+    fprintf(stderr, "   -G             -- Enable radius plugin and pass extended attributes.\n");
     fprintf(stderr, "   -i             -- Ignore PADI if no free sessions.\n");
     fprintf(stderr, "   -h             -- Print usage information.\n\n");
     fprintf(stderr, "PPPoE-Server Version %s, Copyright (C) 2001-2009 Roaring Penguin Software Inc.\n", VERSION);
@@ -1241,9 +1245,9 @@ main(int argc, char **argv)
 #endif
 
 #ifndef HAVE_LINUX_KERNEL_PPPOE
-    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:sp:lrudPc:S:1q:Q:EDF";
+    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:sp:lrudPc:S:1q:Q:DEFG";
 #else
-    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:skp:lrudPc:S:1q:Q:EDF";
+    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:skp:lrudPc:S:1q:Q:DEFG";
 #endif
 
     if (getuid() != geteuid() ||
@@ -1466,6 +1470,9 @@ main(int argc, char **argv)
             break;
         case 'D':
             EnableDlinkCompatibility = 1;
+            break;
+        case 'G':
+            EnableRadiusPlugin = 1;
             break;
 	}
     }
@@ -2031,9 +2038,53 @@ startPPPDLinuxKernelMode(ClientSession *session)
 
     char buffer[SMALLBUF];
 
+    char hostname[255];
+    struct hostent *hp;
+
     argv[c++] = "pppd";
+
+/*
+ * DATACOM RADIUS need next value-pairs:
+ * NAS-IP-Address	[?] - NAS primary ip-address
+ * NAS-Identifier	[ ] - NAS DNS name (may be different with AC-Name)
+ * Called-Station-Id	[ ] - ethernet interface name on which current session has appear
+ */
+
+    if (EnableRadiusPlugin) {
+	argv[c++] = "plugin";
+	argv[c++] = "radius.so";
+
+	    // Put host name as NAS identifier
+	if (gethostname(hostname, sizeof hostname) != 0) exit(EXIT_FAILURE);
+
+	argv[c++] = "avpair";
+	snprintf(buffer, SMALLBUF, "NAS-Identifier=%s", hostname);
+	argv[c++] = strdup(buffer);
+	if (!argv[c-1]) exit(EXIT_FAILURE);
+
+	hp = gethostbyname(hostname);
+	if (!hp) exit(EXIT_FAILURE);
+	/*
+	    argv[c++] = "avpair";
+	    snprintf(buffer, SMALLBUF, "NAS-IP-Address=%s", inet_ntoa( *(struct in_addr*)hp->h_addr ) );
+	    argv[c++] = strdup(buffer);
+	    if (!argv[c-1]) exit(EXIT_FAILURE);
+	*/
+	argv[c++] = "avpair";
+	snprintf(buffer, SMALLBUF, "Called-Station-Id=%s", session->ethif->name);
+	argv[c++] = strdup(buffer);
+	if (!argv[c-1]) exit(EXIT_FAILURE);
+
+	argv[c++] = "avpair";
+	argv[c++] = "NAS-Port-Type=Ethernet";
+	    
+    }
+
     argv[c++] = "plugin";
     argv[c++] = PLUGIN_PATH;
+
+    /* Here is a patch for strange bug with empty Service-Name */
+    if ( !*session->serviceName ) session->serviceName = strdup( "unknown" );
 
     /* Add "nic-" to interface name */
     snprintf(buffer, SMALLBUF, "nic-%s", session->ethif->name);
