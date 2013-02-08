@@ -1,4 +1,4 @@
-rp-pppoe (3.11-1~datacom3) unstable; urgency=low
+rp-pppoe (3.11-1~datacom4) unstable; urgency=low
 
   * Sync to upstream 3.11
   * Patch configure for kernel-mode PPPoE support
