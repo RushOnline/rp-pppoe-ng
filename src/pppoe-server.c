@@ -139,8 +139,8 @@ static UINT16_t max_ppp_payload = 0;
 /* File with PPPD options */
 static char *pppoptfile = NULL;
 
-static char *pppd_path = PPPD_PATH;
-static char *pppoe_path = PPPOE_PATH;
+static char *pppd_path = "/usr/sbin/pppd";
+static char *pppoe_path = "/etc/ppp/plugins/rp-pppoe.so";
 
 static int Debug = 0;
 static int CheckPoolSyntax = 0;
