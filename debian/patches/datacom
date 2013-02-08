@@ -1,0 +1,138 @@
+Index: rp-pppoe-3.11/src/pppoe-server.c
+===================================================================
+--- rp-pppoe-3.11.orig/src/pppoe-server.c	2013-01-24 14:45:03.208330860 +0400
++++ rp-pppoe-3.11/src/pppoe-server.c	2013-01-24 14:45:51.217213206 +0400
+@@ -59,6 +59,13 @@
+ 
+ #include <signal.h>
+ 
++#ifdef DATACOM_QUIRKS
++#include <sys/socket.h>
++#include <netinet/in.h>
++#include <arpa/inet.h>
++#include <netdb.h>
++#endif
++
+ #ifdef HAVE_LICENSE
+ #include "license.h"
+ #include "licensed-only/servfuncs.h"
+@@ -735,6 +742,16 @@
+ 	cursor += TAG_HDR_SIZE;
+ 	plen += TAG_HDR_SIZE;
+     } else {
++
++#ifdef DATACOM_QUIRKS
++	int slen = ntohs(requestedService.length);
++	servname.length = htons(slen);
++	CHECK_ROOM(cursor, pado.payload, TAG_HDR_SIZE+slen);
++	memcpy(cursor, &servname, TAG_HDR_SIZE);
++	memcpy(cursor+TAG_HDR_SIZE, requestedService.payload, slen);
++	cursor += TAG_HDR_SIZE+slen;
++	plen += TAG_HDR_SIZE+slen;
++#else
+ 	for (i=0; i<NumServiceNames; i++) {
+ 	    int slen = strlen(ServiceNames[i]);
+ 	    servname.length = htons(slen);
+@@ -744,6 +761,7 @@
+ 	    cursor += TAG_HDR_SIZE+slen;
+ 	    plen += TAG_HDR_SIZE+slen;
+ 	}
++#endif
+     }
+ 
+     CHECK_ROOM(cursor, pado.payload, TAG_HDR_SIZE + COOKIE_LEN);
+@@ -1103,7 +1121,9 @@
+     syslog(LOG_INFO,
+ 	   "Terminating on signal %d -- killing all PPPoE sessions",
+ 	   sig);
++#ifndef DATACOM_QUIRKS
+     killAllSessions();
++#endif
+     control_exit();
+     exit(0);
+ }
+@@ -1984,10 +2004,55 @@
+ 
+     char buffer[SMALLBUF];
+ 
++#ifdef DATACOM_QUIRKS
++    char hostname[255];
++    struct hostent *hp;
++#endif
+     argv[c++] = "pppd";
++#ifdef DATACOM_QUIRKS	
++    argv[c++] = "plugin"; // At first, we must load radius plugin
++    argv[c++] = "radius.so";
++#endif
+     argv[c++] = "plugin";
+     argv[c++] = PLUGIN_PATH;
+ 
++#ifdef DATACOM_QUIRKS
++
++/*
++ * DATACOM RADIUS need next value-pairs:
++ * NAS-IP-Address	[?] - NAS trunk ip-address
++ * NAS-Identifier	[ ] - NAS DNS name
++ * Called-Station-Id	[ ] - vlan interface on which session appear
++ */
++
++    // Put host name as NAS identifier
++    if (gethostname(hostname, sizeof hostname) != 0) exit(EXIT_FAILURE);
++
++    argv[c++] = "avpair";
++    snprintf(buffer, SMALLBUF, "NAS-Identifier=%s", hostname);
++    argv[c++] = strdup(buffer);
++    if (!argv[c-1]) exit(EXIT_FAILURE);
++
++    hp = gethostbyname(hostname);
++    if (!hp) exit(EXIT_FAILURE);
++/*
++    argv[c++] = "avpair";
++    snprintf(buffer, SMALLBUF, "NAS-IP-Address=%s", inet_ntoa( *(struct in_addr*)hp->h_addr ) );
++    argv[c++] = strdup(buffer);
++    if (!argv[c-1]) exit(EXIT_FAILURE);
++*/
++    argv[c++] = "avpair";
++    snprintf(buffer, SMALLBUF, "Called-Station-Id=%s", session->ethif->name);
++    argv[c++] = strdup(buffer);
++    if (!argv[c-1]) exit(EXIT_FAILURE);
++
++    argv[c++] = "avpair";
++    argv[c++] = "NAS-Port-Type=Ethernet";
++    
++    /* Here is a patch for strange bug with empty Service-Name */
++    if ( !*session->serviceName ) session->serviceName = strdup( "unknown" );
++#endif
++
+     /* Add "nic-" to interface name */
+     snprintf(buffer, SMALLBUF, "nic-%s", session->ethif->name);
+     argv[c++] = strdup(buffer);
+@@ -2007,8 +2072,15 @@
+     }
+     argv[c++] = "rp_pppoe_service";
+     argv[c++] = (char *) session->serviceName;
++
+     argv[c++] = "file";
++
++#ifdef DATACOM_QUIRKS
++    snprintf(buffer, SMALLBUF, "/etc/ppp/pppoed-%s.conf", session->serviceName );
++    argv[c++] = strdup(buffer);
++#else
+     argv[c++] = pppoptfile;
++#endif
+ 
+     snprintf(buffer, SMALLBUF, "%d.%d.%d.%d:%d.%d.%d.%d",
+ 	    (int) session->myip[0], (int) session->myip[1],
+Index: rp-pppoe-3.11/src/Makefile.in
+===================================================================
+--- rp-pppoe-3.11.orig/src/Makefile.in	2013-01-24 14:46:46.067361288 +0400
++++ rp-pppoe-3.11/src/Makefile.in	2013-01-24 14:46:53.608756561 +0400
+@@ -92,7 +92,7 @@
+ 	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+ 
+ pppoe-server.o: pppoe-server.c pppoe.h @PPPOE_SERVER_DEPS@
+-	@CC@ $(CFLAGS) -DHAVE_LINUX_KERNEL_PPPOE=1 '-DVERSION="$(VERSION)"' -c -o $@ $<
++	@CC@ $(CFLAGS) -DHAVE_LINUX_KERNEL_PPPOE=1 -DDATACOM_QUIRKS '-DVERSION="$(VERSION)"' -c -o $@ $<
+ 
+ pppoe-sniff.o: pppoe-sniff.c pppoe.h
+ 	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<

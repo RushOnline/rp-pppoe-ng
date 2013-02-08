@@ -1,0 +1,11 @@
+#!/usr/bin/make -f
+
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/cdbs/1/rules/patchsys-quilt.mk
+include /usr/share/cdbs/1/class/autotools.mk
+include /usr/share/cdbs/1/class/makefile.mk
+
+#export DH_VERBOSE=1
+
+DEB_SRCDIR = src
+DEB_QUILT_TOPDIR = .

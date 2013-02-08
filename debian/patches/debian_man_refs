@@ -1,0 +1,39 @@
+--- rp-pppoe-3.11.orig/man/pppoe-relay.8	2013-01-24 11:52:00.926899511 +0400
++++ rp-pppoe-3.11/man/pppoe-relay.8	2013-01-24 11:53:19.071359189 +0400
+@@ -119,6 +119,4 @@
+ The \fBpppoe\fR home page is \fIhttp://www.roaringpenguin.com/pppoe/\fR.
+ 
+ .SH SEE ALSO
+-pppoe-start(8), pppoe-stop(8), pppoe-connect(8), pppd(8), pppoe.conf(5),
+-pppoe(8), pppoe-setup(8), pppoe-status(8), pppoe-sniff(8), pppoe-server(8)
+-
++pppd(8), pppoe(8), pppoe-sniff(8), pppoe-relay(8), /usr/share/doc/pppoe/README.Debian.gz
+--- rp-pppoe-3.11.orig/man/pppoe-server.8	2013-01-24 11:52:00.896893963 +0400
++++ rp-pppoe-3.11/man/pppoe-server.8	2013-01-24 11:53:25.892621715 +0400
+@@ -203,6 +208,4 @@
+ The \fBpppoe\fR home page is \fIhttp://www.roaringpenguin.com/pppoe/\fR.
+ 
+ .SH SEE ALSO
+-pppoe-start(8), pppoe-stop(8), pppoe-connect(8), pppd(8), pppoe.conf(5),
+-pppoe(8), pppoe-setup(8), pppoe-status(8), pppoe-sniff(8), pppoe-relay(8)
+-
++pppd(8), pppoe(8), pppoe-sniff(8), pppoe-relay(8), /usr/share/doc/pppoe/README.Debian.gz
+--- rp-pppoe-3.11.orig/man/pppoe-sniff.8	2013-01-24 11:52:00.856886570 +0400
++++ rp-pppoe-3.11/man/pppoe-sniff.8	2013-01-24 11:53:33.364004567 +0400
+@@ -72,6 +72,4 @@
+ The \fBpppoe\fR home page is \fIhttp://www.roaringpenguin.com/pppoe/\fR.
+ 
+ .SH SEE ALSO
+-pppoe-start(8), pppoe-stop(8), pppoe-connect(8), pppd(8), pppoe.conf(5),
+-pppoe(8), pppoe-setup(8), pppoe-status(8), pppoe-server(8), pppoe-relay(8)
+-
++pppd(8), pppoe(8), pppoe-sniff(8), pppoe-relay(8), /usr/share/doc/pppoe/README.Debian.gz
+--- rp-pppoe-3.11.orig/man/pppoe.8	2013-01-24 11:52:00.956905059 +0400
++++ rp-pppoe-3.11/man/pppoe.8	2013-01-24 11:52:35.323261955 +0400
+@@ -232,5 +245,4 @@
+ The \fBpppoe\fR home page is \fIhttp://www.roaringpenguin.com/pppoe/\fR.
+ 
+ .SH SEE ALSO
+-pppoe-start(8), pppoe-stop(8), pppoe-connect(8), pppd(8), pppoe.conf(5), pppoe-setup(8), pppoe-status(8), pppoe-sniff(8), pppoe-server(8), pppoe-relay(8)
+-
++pppd(8), pppoe-sniff(8), pppoe-server(8), pppoe-relay(8), /usr/share/doc/pppoe/README.Debian.gz

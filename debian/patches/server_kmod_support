@@ -1,0 +1,11 @@
+--- rp-pppoe-3.11.orig/src/Makefile.in	2013-01-24 12:45:00.565382724 +0400
++++ rp-pppoe-3.11/src/Makefile.in	2013-01-24 12:54:03.275862776 +0400
+@@ -92,7 +92,7 @@
+ 	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
+ 
+ pppoe-server.o: pppoe-server.c pppoe.h @PPPOE_SERVER_DEPS@
+-	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
++	@CC@ $(CFLAGS) -DHAVE_LINUX_KERNEL_PPPOE=1 '-DVERSION="$(VERSION)"' -c -o $@ $<
+ 
+ pppoe-sniff.o: pppoe-sniff.c pppoe.h
+ 	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<

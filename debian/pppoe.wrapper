@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Extract the last interface from pppoe command line (-I option).
+
+index=0
+iface=eth0
+
+if [ "$1" == "-I" ]; then
+    iface="$2"
+fi
+args[$((index++))]=$1
+while shift; do
+    if [ "$1" == "-I" ]; then
+	iface="$2"
+    fi
+    args[$((index++))]=$1
+done
+
+# Bring the interface up.
+ifconfig "$iface" up >/dev/null 2>/dev/null
+# Start pppoe.
+exec /usr/sbin/pppoe.real "${args[@]}"

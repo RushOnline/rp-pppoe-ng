@@ -1,0 +1,79 @@
+--- rp-pppoe-3.11.orig/src/pppoe.c	2013-01-24 11:52:00.736864371 +0400
++++ rp-pppoe-3.11/src/pppoe.c	2013-01-24 11:53:53.297694012 +0400
+@@ -67,6 +67,48 @@
+ 				   USED FOR STRESS-TESTING ONLY.  DO NOT
+ 				   USE THE -F OPTION AGAINST A REAL ISP */
+ 
++#ifdef AUTO_IFUP
++/* for interface activation, based on stripped down source source of ifconfig*/
++#include <linux/if.h>
++/*#include <sys/socket.h> */
++#include <sys/types.h>
++#include <sys/socket.h>
++#include "config.h"
++int skfd = -1;			/* generic raw socket desc.     */
++int sockets_open(int family)
++{
++  int sfd = -1;
++  sfd = socket(AF_INET, SOCK_DGRAM, 0);
++  return sfd;
++}
++/* Like strncpy but make sure the resulting string is always 0 terminated.
++ * Ripped from util.c (net-tools package) */  
++char *safe_strncpy(char *dst, const char *src, size_t size)
++{   
++    dst[size-1] = '\0';
++    return strncpy(dst,src,size-1);   
++}
++/* Set a certain interface flag. Ripped from ifconfig.c */
++static int set_flag(char *ifname, short flag)
++{
++    struct ifreq ifr;
++
++    safe_strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
++    if (ioctl(skfd, SIOCGIFFLAGS, &ifr) < 0) {
++	fprintf(stderr, "%s: unknown interface: %s\n", 
++		ifname,	strerror(errno));
++	return (-1);
++    }
++    safe_strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
++    ifr.ifr_flags |= flag;
++    if (ioctl(skfd, SIOCSIFFLAGS, &ifr) < 0) {
++	perror("SIOCSIFFLAGS");
++	return -1;
++    }
++    return (0);
++}
++#endif
++
+ PPPoEConnection *Connection = NULL; /* Must be global -- used
+ 				       in signal handler */
+ 
+@@ -582,6 +637,16 @@
+ #endif
+     }
+ 
++#ifdef AUTO_IFUP    
++    /* Create a channel to the NET kernel. */
++    if ((skfd = sockets_open(0)) < 0) {
++	perror("socket");
++	exit(1);
++    }
++
++    set_flag(conn.ifName, (IFF_UP | IFF_RUNNING));
++#endif
++
+     if (!conn.printACNames) {
+ 
+ #ifdef HAVE_N_HDLC
+--- rp-pppoe-3.11.orig/src/Makefile.in	2013-01-24 12:45:00.565382724 +0400
++++ rp-pppoe-3.11/src/Makefile.in	2013-01-24 12:54:03.275862776 +0400
+@@ -80,7 +80,7 @@
+ 	@CC@ -o $@ $^ $(LDFLAGS)
+ 
+ pppoe.o: pppoe.c pppoe.h
+-	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<
++	@CC@ $(CFLAGS) -DAUTO_IFUP '-DVERSION="$(VERSION)"' -c -o $@ $<
+ 
+ discovery.o: discovery.c pppoe.h
+ 	@CC@ $(CFLAGS) '-DVERSION="$(VERSION)"' -c -o $@ $<

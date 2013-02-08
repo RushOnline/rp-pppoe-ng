@@ -1,0 +1,34 @@
+Index: rp-pppoe-3.11/src/if.c
+===================================================================
+--- rp-pppoe-3.11.orig/src/if.c	2013-01-24 11:52:00.766869926 +0400
++++ rp-pppoe-3.11/src/if.c	2013-01-24 11:53:48.666836912 +0400
+@@ -458,9 +458,28 @@
+     if (hwaddr) {
+ 	strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+ 	if (ioctl(fd, SIOCGIFHWADDR, &ifr) < 0) {
++	  fatalSys("ioctl(SIOCGIFHWADDR)");
++	}
++	/* fake MAC address if hwaddr != 0:00:00:00:00:00 */
++	if ((hwaddr[0]==0) && (hwaddr[1]==0) && (hwaddr[2]==0) &&
++	    (hwaddr[3]==0) && (hwaddr[4]==0) && (hwaddr[5]==0)) {
++	  /* this is the normal mode, do not fake anything */
++	  memcpy(hwaddr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
++	} else {
++	  /* this is the mode using a faked Hardware address */
++	  /* switch Interface to promisc Mode */
++	  if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
++	    	  fatalSys("ioctl(SIOCGIFFLAGS)");
++	  }
++	  ifr.ifr_flags |= IFF_PROMISC;
++	  if (ioctl(fd, SIOCSIFFLAGS, &ifr) < 0) {
++	      fatalSys("ioctl(SIOCSIFFLAGS)");
++	  }
++	  /* satisfy the subsequent checks */
++	  if (ioctl(fd, SIOCGIFHWADDR, &ifr) < 0) {
+ 	    fatalSys("ioctl(SIOCGIFHWADDR)");
++	  }
+ 	}
+-	memcpy(hwaddr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
+ #ifdef ARPHRD_ETHER
+ 	if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER) {
+ 	    char buffer[256];

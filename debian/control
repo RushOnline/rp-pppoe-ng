@@ -1,0 +1,15 @@
+Source: rp-pppoe
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Andreas Barth <aba@not.so.argh.org>
+Standards-Version: 3.6.0
+Section: net
+Priority: optional
+Build-Depends: debhelper (> 5), autoconf, quilt, cdbs
+
+Package: pppoe
+Architecture: any
+Depends: ${shlibs:Depends}, ppp (>= 2.3.10-1), ${misc:Depends}
+Description: PPP over Ethernet driver
+ PPP over Ethernet (PPPoE) is a protocol used by
+ many ADSL Internet service providers. This package allows
+ you to connect to those PPPoE service providers.

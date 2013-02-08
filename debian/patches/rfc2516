@@ -1,0 +1,118 @@
+Index: rp-pppoe-3.11/src/pppoe-server.c
+===================================================================
+--- rp-pppoe-3.11.orig/src/pppoe-server.c	2013-01-24 15:42:50.720324093 +0400
++++ rp-pppoe-3.11/src/pppoe-server.c	2013-01-24 16:36:35.658953876 +0400
+@@ -625,6 +625,7 @@
+ 
+     int sock = ethif->sock;
+     int i;
++    int slen;
+     int ok = 0;
+     unsigned char *myAddr = ethif->mac;
+ 
+@@ -671,7 +672,7 @@
+     /* If PADI specified non-default service name, and we do not offer
+        that service, DO NOT send PADO */
+     if (requestedService.type) {
+-	int slen = ntohs(requestedService.length);
++	slen = ntohs(requestedService.length);
+ 	if (slen) {
+ 	    for (i=0; i<NumServiceNames; i++) {
+ 		if (slen == strlen(ServiceNames[i]) &&
+@@ -692,6 +693,14 @@
+ 	return;
+     }
+ 
++#ifdef DATACOM_QUIRKS
++    /* If client does not follow RFC2516, we MUST serve it anyway */
++    if (!requestedService.type) {
++        requestedService.type = htons(TAG_SERVICE_NAME);
++        requestedService.length = 0;
++    }
++#endif
++
+     /* Generate a cookie */
+     cookie.type = htons(TAG_AC_COOKIE);
+     cookie.length = htons(COOKIE_LEN);
+@@ -735,6 +744,15 @@
+     /* If no service-names specified on command-line, just send default
+        zero-length name.  Otherwise, add all service-name tags */
+     servname.type = htons(TAG_SERVICE_NAME);
++#ifdef DATACOM_QUIRKS
++    /* at first we must reply what requested */
++    slen = ntohs(requestedService.length);
++    CHECK_ROOM(cursor, pado.payload, TAG_HDR_SIZE + slen);
++    memcpy(cursor, &requestedService, TAG_HDR_SIZE);
++    memcpy(cursor+TAG_HDR_SIZE, requestedService.payload, slen);
++    cursor += TAG_HDR_SIZE + slen;
++    plen += TAG_HDR_SIZE + slen;
++#else
+     if (!NumServiceNames) {
+ 	servname.length = 0;
+ 	CHECK_ROOM(cursor, pado.payload, TAG_HDR_SIZE);
+@@ -742,27 +760,25 @@
+ 	cursor += TAG_HDR_SIZE;
+ 	plen += TAG_HDR_SIZE;
+     } else {
++#endif
+ 
+-#ifdef DATACOM_QUIRKS
+-	int slen = ntohs(requestedService.length);
+-	servname.length = htons(slen);
+-	CHECK_ROOM(cursor, pado.payload, TAG_HDR_SIZE+slen);
+-	memcpy(cursor, &servname, TAG_HDR_SIZE);
+-	memcpy(cursor+TAG_HDR_SIZE, requestedService.payload, slen);
+-	cursor += TAG_HDR_SIZE+slen;
+-	plen += TAG_HDR_SIZE+slen;
+-#else
+ 	for (i=0; i<NumServiceNames; i++) {
+-	    int slen = strlen(ServiceNames[i]);
++	    slen = strlen(ServiceNames[i]);
+ 	    servname.length = htons(slen);
++#ifdef DATACOM_QUIRKS
++            /* Skip the requested service because it is already in the PADO */
++            if ((servname.length == requestedService.length)
++                && !memcmp(requestedService.payload, ServiceNames[i], slen)) continue;
++#endif
+ 	    CHECK_ROOM(cursor, pado.payload, TAG_HDR_SIZE+slen);
+ 	    memcpy(cursor, &servname, TAG_HDR_SIZE);
+ 	    memcpy(cursor+TAG_HDR_SIZE, ServiceNames[i], slen);
+ 	    cursor += TAG_HDR_SIZE+slen;
+ 	    plen += TAG_HDR_SIZE+slen;
+ 	}
++#ifndef DATACOM_QUIRKS
++    };
+ #endif
+-    }
+ 
+     CHECK_ROOM(cursor, pado.payload, TAG_HDR_SIZE + COOKIE_LEN);
+     memcpy(cursor, &cookie, TAG_HDR_SIZE + COOKIE_LEN);
+@@ -2009,20 +2025,23 @@
+     struct hostent *hp;
+ #endif
+     argv[c++] = "pppd";
+-#ifdef DATACOM_QUIRKS	
++#ifdef DATACOM_QUIRKS
+     argv[c++] = "plugin"; // At first, we must load radius plugin
+     argv[c++] = "radius.so";
+-#endif
++    argv[c++] = "plugin"; // At second, we must load pppoe plugin
++    argv[c++] = "rp-pppoe.so";
++#else
+     argv[c++] = "plugin";
+     argv[c++] = PLUGIN_PATH;
++#endif
+ 
+ #ifdef DATACOM_QUIRKS
+ 
+ /*
+  * DATACOM RADIUS need next value-pairs:
+- * NAS-IP-Address	[?] - NAS trunk ip-address
+- * NAS-Identifier	[ ] - NAS DNS name
+- * Called-Station-Id	[ ] - vlan interface on which session appear
++ * NAS-Identifier	NAS DNS name
++ * Called-Station-Id	VLAN interface on which session appears
++ * NAS-Port-Type        Ethernet
+  */
+ 
+     // Put host name as NAS identifier

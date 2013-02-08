@@ -1,0 +1,125 @@
+		  How to Setup your DSL PPPoE Connection
+
+To get pppoe running, you will need to fill in at least the three following
+pieces of information:
+
+a) your user name (given to you by your DSL provider)
+b) your password
+c) the Ethernet interface your DSL modem is connected (if you have more
+than one Ethernet card)
+
+To do this, follow the following steps while logged in as root:
+
+1. Edit the file /etc/ppp/pap-secrets file, adding a line to the outbound
+connections sections that has the following format:
+
+username@sympatico.ca	  sympatico.ca	    password
+
+Replace "username" by the username your DSL provider gave you and "password"
+by your password. This assumes that your provider is Sympatico. If it is
+not, you will also need to replace 'sympatico.ca' by the address of your
+provider. (T-DSL users from Germany may want to have a look at the end of
+this file for hints on figuring out the username that ppp needs.)
+
+2. In the file /etc/ppp/peers/dsl-provider, uncomment and edit the "user" line.
+Using our example of "username@sympatico.ca" the line should then look like
+this:
+
+user username@sympatico.ca
+
+with what follows 'user' being identical to the first part of the line you
+added to pap-secrets.
+
+3. If you have more than one Ethernet card in your computer, replace the
+"eth0" in the /etc/ppp/peers/dsl-provider file by the interface your DSL
+modem is plugged in.
+
+4. Now, to bring your connection up, do one of the following:
+
+ a) If you want your connection to come up automatically (either for an
+ always-on connection or if you are using demand-dialing), add the following
+ to /etc/network/interfaces:
+
+   auto myisp
+   iface myisp inet ppp
+           provider dsl-provider
+
+ To start your pppoe connection, execute "ifup myisp". The connection will 
+ also come up automatically the next time you boot.
+
+ (Note that for demand-dialing, you will need to edit the
+ /etc/ppp/peers/dsl-provider file and uncomment the lines in section 2.)
+
+ b) If you want to bring your connection up manually (because your DSL
+ provider charges per minute connected), simply type "pon dsl-provider" to
+ bring the connection up and "poff" to bring it down.
+
+In both cases, running the "plog" command, you should see in one of the
+lines something line "pppd[216]: Connect: ppp0 <--> eth0". which means that
+the connection came up successfully.
+
+------
+
+		     User-Contributed Hints and Tips
+
+- The following kernel options needs to be enabled to run pppoe:
+  CONFIG_PPP, CONFIG_PPP_ASYNC.
+
+- The Debian pppoe program is patched to automatically bring up the
+  Ethernet interface.
+
+- If the connection comes up without problems (i.e. no ppp errors show
+  up when you execute the "plog" command) but no data can be send or
+  received, check using the "route" command if there is another default
+  route (aka gateway) when you start the connection. If so try deleting this
+  route, by removing the corresponding "gateway" line in the 
+  /etc/network/interfaces file.
+  You may find useful the replacedefaultroute pppd keywork.
+
+- If the usepeerdns keyword is used in /etc/ppp/peers/dsl-provider,
+  once the connection is up the default pppd configuration will
+  automatically update /etc/resolv.conf with the name server addresses
+  provided by your ISP.
+
+- If your machine is a gateway for a LAN, the clients may have problems
+  connecting to some sites. To avoid this problem, you need to clamp MSS
+  size, using the "-m" option of pppoe. Example lines doing this are provided
+  in the /etc/ppp/peers/dsl-provider file supplied with this package.
+
+- German T-DSL user may find the following example useful in figuring out
+  the correct user name for ppp. (Taken from
+  http://www.adsl4linux.de/software/tonline_rp-pppoe.html)
+
+   _________________________________________________________
+  /                                                         \
+  | Anschlusskennung: 11111111111                            |
+  | T-Onlinenummer: 222222222222                             |
+  | Mitbenutzer: 0001                                        |
+  | Passwort: geHeim                                         |
+  |                                                          |
+  | Listing 1: /etc/ppp/pap-secrets                          |
+  |                                                          |
+  | # Secrets for authentication using PAP                   |
+  | # client      server      secret      IP addresses       |
+  |                                                          |
+  | "111111111111222222222222#0001@t-online.de"  *  "geHeim" |
+  \_________________________________________________________/
+
+  Due to the presence of a "#" character in the username, the username will
+  need quoting in the dsl-provider file, like this:
+
+    user "111111111111222222222222#0001@t-online.de"
+
+- RFC 2516 paragraph 7 mandates that the following options MUST NOT be
+  requested and MUST be rejected if requested by the peer:
+   - Field Check Sequence (FCS) Alternatives
+   - Address-and-Control-Field-Compression (ACFC)
+   - Asynchronous-Control-Character-Map (ACCM)
+  The first option is not implemented by pppd, the others are disabled with
+  the keywords noaccomp and default-asyncmap in /etc/ppp/peers/dsl-provider.
+  Removing them (especially default-asyncmap) may break your connection.
+  The use of default-asyncmap will not cause a connection slowdown because
+  even if the default asyncmap is FFFFFFFF, it can be used only with ttys.
+
+
+ -- Christian Hudon <chrish@debian.org>, Tue Sep 16 14:08:08 2003

@@ -1,0 +1,9 @@
+# All patches here are already integrated
+#auto_ifup
+#server_kmod_support
+#debian_man_refs
+#force_hardware_address
+#fix_broadcast_pado
+#fix_if_null_hwaddr
+#datacom
+#rfc2516
